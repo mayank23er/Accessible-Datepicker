@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Accessible DateTime Picker Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <h2>Accessible DateTime Picker Demo</h2>
+  <div class="datepicker-container">
+  <label for="dateOnly">Date Only Picker</label>
+  <input id="dateOnly" placeholder="MM/DD/YYYY" readonly aria-haspopup="dialog">
+ 
+
+  <label for="dateTime">Date & Time Picker</label>
+  <input id="dateTime" placeholder="MM/DD/YYYY HH:MM AM/PM" readonly aria-haspopup="dialog">
+
+
+  <label for="dateRange">Date Range Picker</label>
+  <input id="dateRange" placeholder="MM/DD/YYYY - MM/DD/YYYY" readonly aria-haspopup="dialog">
+
+
+  <label for="timeOnly">Time Only Picker</label>
+  <input id="timeOnly" placeholder="HH:MM AM/PM" readonly aria-haspopup="dialog">
+</div>
+  <script src="js/accessible-datepicker.js"></script>
+
+</body>
+</html>
