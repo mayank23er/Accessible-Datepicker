@@ -2,9 +2,10 @@
 // Supports: date-only, date-time, date-range, time-only
 
 class AccessibleDatePicker {
-  constructor(input, type = 'date') {
+  constructor(input, type = 'date', showValidation = false) {
     this.input = input;
     this.type = type;
+    this.showValidation = showValidation; 
     this.dialog = null;
     this.startDate = null;
     this.endDate = null;
@@ -14,7 +15,7 @@ class AccessibleDatePicker {
     this.init();
   }
 
-  init() {
+init() {
     this.createDialog();
     this.input.addEventListener('click', () => {
       document.querySelectorAll('.datepicker-dialog').forEach(dialog => {
@@ -25,11 +26,26 @@ class AccessibleDatePicker {
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        this.confirmSelection();
+        this.openDialog(); // Open dialog on Enter/Space
       } else if (e.key === 'Escape') {
         this.closeDialog();
       }
     });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeDialog();
+      }
+    });
+	// outside-click logic
+  document.addEventListener('pointerdown', (event) => {
+  if (
+    this.dialog.style.display === 'block' &&
+    !this.dialog.contains(event.target) &&
+    event.target !== this.input
+  ) {
+    this.closeDialog();
+  }
+});
   }
 
  createDialog() {
@@ -42,7 +58,6 @@ class AccessibleDatePicker {
     const isRange = this.type === 'daterange';
     const isDateTime = this.type === 'datetime';
 
-    // Month and year dropdown controls for single calendar (shown for date & datetime)
     const singleCalendarControls = `
       <div class="controls">
         <button class="prev-month" data-target="start" aria-label="Previous Month">←</button>
@@ -52,7 +67,6 @@ class AccessibleDatePicker {
       </div>
       <div class="calendar calendar-single" role="grid"></div>`;
 
-    // Time picker dropdowns for time and datetime types
     const timeMarkup = isTime || isDateTime ? `
       <div class="time-controls">
         <label>Hour: <select class="hour">${[...Array(12).keys()].map(i => `<option>${String(i + 1).padStart(2, '0')}</option>`).join('')}</select></label>
@@ -60,7 +74,6 @@ class AccessibleDatePicker {
         <label>AM/PM: <select class="ampm"><option>AM</option><option>PM</option></select></label>
       </div>` : '';
 
-    // Calendar section rendering based on picker type
     const calendarMarkup = isTime ? '' : isRange ? `
       <div class="dual-calendar">
         <div class="calendar-section">
@@ -86,6 +99,8 @@ class AccessibleDatePicker {
         ${singleCalendarControls}
       </div>`;
 
+    const validationMessage = this.showValidation ? `<div class="validation-message" role="alert" aria-live="polite" style="color: red; margin-top: 0.5rem; display: none;">Please select a valid ${this.type.replace('datetime', 'date & time')}.</div>` : '';
+
     this.dialog.innerHTML = `
       <div class="picker-header">Choose ${this.type}</div>
       ${calendarMarkup}
@@ -94,16 +109,11 @@ class AccessibleDatePicker {
         <button class="confirm">Confirm</button>
         <button class="cancel">Cancel</button>
       </div>
+      ${validationMessage}
     `;
 
     document.body.appendChild(this.dialog);
-    // Ensure month and year selects are initialized for datetime pickers too
-  //  if (!this.type.includes('time')) {
-     // this.populateMonthYearSelects();
-  //  }
-
-   this.populateMonthYearSelects();
-
+    this.populateMonthYearSelects();
     this.attachEvents();
     this.dialog.style.display = 'none';
   }
@@ -218,6 +228,11 @@ class AccessibleDatePicker {
       btn.textContent = d;
       btn.setAttribute('tabindex', '0');
       const date = new Date(year, month, d);
+	  const weekday = date.getDay();
+      if (weekday === 0 || weekday === 6) {
+         btn.classList.add('weekend'); // Highlight weekends
+      }
+
 
       if (this.isToday(date)) btn.setAttribute('aria-current', 'date');
       if (this.startDate && date.toDateString() === this.startDate.toDateString()) btn.classList.add('range-start');
@@ -225,27 +240,31 @@ class AccessibleDatePicker {
       if (this.startDate && this.endDate && date > this.startDate && date < this.endDate) btn.classList.add('range-between');
 
       btn.onclick = () => {
-        if (this.type === 'daterange') {
-          if (!this.startDate || (this.startDate && this.endDate)) {
-            this.startDate = date;
-            this.endDate = null;
-            this.renderAllCalendars();
-            setTimeout(() => {
-              this.dialog.querySelector('.calendar-end')?.querySelector('button')?.focus();
-            }, 10);
-          } else {
-            if (date >= this.startDate) this.endDate = date;
-            else {
-              this.endDate = this.startDate;
-              this.startDate = date;
-            }
-            this.renderAllCalendars();
-          }
-        } else {
-          this.startDate = date;
-          this.confirmSelection();
-        }
-      };
+  if (this.type === 'daterange') {
+    if (!this.startDate || (this.startDate && this.endDate)) {
+      this.startDate = date;
+      this.endDate = null;
+      this.renderAllCalendars();
+
+      // ✅ Maintain for accessibility: move focus to end calendar
+      setTimeout(() => {
+        this.dialog.querySelector('.calendar-end')?.querySelector('button')?.focus();
+      }, 10);
+    } else {
+      if (date >= this.startDate) {
+        this.endDate = date;
+      } else {
+        this.endDate = this.startDate;
+        this.startDate = date;
+      }
+      this.renderAllCalendars();
+      this.confirmSelection(); // ✅ Only confirm after both dates
+    }
+  } else {
+    this.startDate = date;
+    this.confirmSelection();
+  }
+};
 
       btn.onkeydown = (e) => this.handleArrowNav(e, date, container, refDate);
       container.appendChild(btn);
@@ -290,71 +309,96 @@ class AccessibleDatePicker {
 
   confirmSelection() {
     let result = '';
-    if (this.type === 'daterange' && this.startDate && this.endDate) {
-      result = `${this.startDate.toLocaleDateString()} - ${this.endDate.toLocaleDateString()}`;
-    } else if (this.startDate) {
-      result = this.startDate.toLocaleDateString();
-    }
+    const validationEl = this.dialog.querySelector('.validation-message');
 
-    if (this.type.includes('time') && this.startDate) {
+    //accept single date in the date range
+    // if (this.type === 'daterange' && this.startDate && this.endDate) {
+    //   result = `${this.startDate.toLocaleDateString()} - ${this.endDate.toLocaleDateString()}`;
+    // } else if (this.startDate) {
+    //   result = this.startDate.toLocaleDateString();
+    // }
+ // Handle daterange: require both start and end dates
+    if (this.type === 'daterange') {
+      if (this.startDate && this.endDate) {
+        result = `${this.startDate.toLocaleDateString()} - ${this.endDate.toLocaleDateString()}`;
+      } else {
+        if (this.showValidation && validationEl) validationEl.style.display = 'block';
+        return;
+      }
+    } // Handle date and datetime: date must be selected
+  else if (this.type === 'date' || this.type === 'datetime') {
+    if (!this.startDate) {
+      if (this.showValidation && validationEl) validationEl.style.display = 'block';
+      return;
+    }
+    result = this.startDate.toLocaleDateString();
+  }
+
+    if (this.type.includes('time')) {
       const hour = parseInt(this.dialog.querySelector('.hour').value);
       const minute = parseInt(this.dialog.querySelector('.minute').value);
       const ampm = this.dialog.querySelector('.ampm').value;
       const hr24 = ampm === 'PM' ? (hour % 12) + 12 : hour % 12;
-      this.startDate.setHours(hr24);
-      this.startDate.setMinutes(minute);
+      const now = new Date();
+      now.setHours(hr24);
+      now.setMinutes(minute);
+      now.setSeconds(0);
+      now.setMilliseconds(0);
+      this.startDate = now;
+
       result = this.type === 'time'
         ? this.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : result + ' ' + this.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    
-
+    if (!result) {
+      if (this.showValidation && validationEl) {
+        validationEl.style.display = 'block';
+      }
+      return;
+    }
 
     this.input.value = result;
+    if (validationEl) validationEl.style.display = 'none';
     this.closeDialog();
   }
 
-  closeDialog() {
+   closeDialog() {
     this.dialog.style.display = 'none';
     this.input.setAttribute('aria-expanded', 'false');
   }
 
- openDialog() {
-  const rect = this.input.getBoundingClientRect();
-  const dialogHeight = this.dialog.offsetHeight || 360; // fallback
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const spaceAbove = rect.top;
+  openDialog() {
+    const rect = this.input.getBoundingClientRect();
+    const dialogHeight = this.dialog.offsetHeight || 360;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
 
-  // Remove previous direction class
-  this.dialog.classList.remove('above');
+    this.dialog.classList.remove('above');
+    const shouldShowAbove = spaceAbove > dialogHeight && spaceBelow < dialogHeight;
 
-  // Decide position
-  const shouldShowAbove = spaceAbove > dialogHeight && spaceBelow < dialogHeight;
+    this.dialog.style.display = 'block';
+    this.dialog.style.position = 'absolute';
+    this.dialog.style.left = `${rect.left + window.pageXOffset}px`;
 
-  // Set absolute positioning next to input
-  this.dialog.style.display = 'block';
-  this.dialog.style.position = 'absolute';
-  this.dialog.style.left = `${rect.left + window.pageXOffset}px`;
+    if (shouldShowAbove) {
+      this.dialog.style.top = 'auto';
+      this.dialog.style.bottom = `${window.innerHeight - rect.top + window.pageYOffset}px`;
+      this.dialog.classList.add('above');
+    } else {
+      this.dialog.style.top = `${rect.bottom + window.pageYOffset}px`;
+      this.dialog.style.bottom = 'auto';
+    }
 
-  if (shouldShowAbove) {
-    this.dialog.style.top = 'auto';
-    this.dialog.style.bottom = `${window.innerHeight - rect.top + window.pageYOffset}px`;
-    this.dialog.classList.add('above');
-  } else {
-    this.dialog.style.top = `${rect.bottom + window.pageYOffset}px`;
-    this.dialog.style.bottom = 'auto';
-  }
+    this.renderAllCalendars();
 
-  this.renderAllCalendars();
-  //  Set focus on the first calendar's button when range picker opens
     if (this.type === 'daterange') {
       setTimeout(() => {
         const firstBtn = this.dialog.querySelector('.calendar-start button');
         if (firstBtn) firstBtn.focus();
       }, 0);
     }
-}
+  }
 }
 
 ['dateOnly', 'dateTime', 'dateRange', 'timeOnly'].forEach(id => {
@@ -363,6 +407,6 @@ class AccessibleDatePicker {
     const type = id === 'dateOnly' ? 'date' :
                  id === 'dateTime' ? 'datetime' :
                  id === 'timeOnly' ? 'time' : 'daterange';
-    new AccessibleDatePicker(input, type);
+    new AccessibleDatePicker(input, type, true);
   }
 });
