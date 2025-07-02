@@ -51,6 +51,9 @@ init() {
  createDialog() {
     this.dialog = document.createElement('div');
     this.dialog.className = 'datepicker-dialog';
+	if (this.type === 'daterange') {
+  this.dialog.classList.add('dual');
+}
     this.dialog.setAttribute('role', 'dialog');
     this.dialog.setAttribute('aria-modal', 'true');
 
@@ -77,6 +80,7 @@ init() {
     const calendarMarkup = isTime ? '' : isRange ? `
       <div class="dual-calendar">
         <div class="calendar-section">
+		 <h3 class="calendar-heading">From</h3>
           <div class="controls">
             <button class="prev-month" data-target="start" aria-label="Previous Month">←</button>
             <select class="month-select-start" aria-label="Month"></select>
@@ -86,6 +90,7 @@ init() {
           <div class="calendar calendar-start" role="grid"></div>
         </div>
         <div class="calendar-section">
+		 <h3 class="calendar-heading">To</h3>
           <div class="controls">
             <button class="prev-month" data-target="end" aria-label="Previous Month">←</button>
             <select class="month-select-end" aria-label="Month"></select>
@@ -196,6 +201,8 @@ init() {
   }
 
  renderAllCalendars() {
+	 // Ensure dropdowns always reflect the current month/year
+		this.populateMonthYearSelects();
     if (this.type === 'daterange') {
       this.renderCalendar(this.dialog.querySelector('.calendar-start'), this.startMonthDate);
       this.renderCalendar(this.dialog.querySelector('.calendar-end'), this.endMonthDate);
@@ -241,30 +248,50 @@ init() {
 
       btn.onclick = () => {
   if (this.type === 'daterange') {
+    const statusEl = this.dialog.querySelector('.range-status');
+
+    // If no startDate or both dates already selected, begin a new selection
     if (!this.startDate || (this.startDate && this.endDate)) {
       this.startDate = date;
       this.endDate = null;
       this.renderAllCalendars();
 
-      // ✅ Maintain for accessibility: move focus to end calendar
+      // Optional: Update ARIA status message
+      if (statusEl) {
+        statusEl.textContent = 'Now select the end date.';
+      }
+
+      // Move focus to the "To" calendar for accessibility
       setTimeout(() => {
         this.dialog.querySelector('.calendar-end')?.querySelector('button')?.focus();
       }, 10);
     } else {
+      // Second click - determine proper range
       if (date >= this.startDate) {
         this.endDate = date;
       } else {
+        // User selected an earlier date for "To" — swap
         this.endDate = this.startDate;
         this.startDate = date;
       }
+
       this.renderAllCalendars();
-      this.confirmSelection(); // ✅ Only confirm after both dates
+
+      // Optional: Clear ARIA status message
+      if (statusEl) {
+        statusEl.textContent = '';
+      }
+
+      // Confirm only when both dates are selected
+      this.confirmSelection();
     }
   } else {
+    // For non-daterange types (date, datetime, time)
     this.startDate = date;
     this.confirmSelection();
   }
 };
+
 
       btn.onkeydown = (e) => this.handleArrowNav(e, date, container, refDate);
       container.appendChild(btn);

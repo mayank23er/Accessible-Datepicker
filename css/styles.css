@@ -5,6 +5,13 @@ body {
   padding: 2rem;
 }
 
+.datepicker-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .datepicker-container input[readonly] {
   width: 100%;
   max-width: 300px;
@@ -16,29 +23,24 @@ body {
   cursor: pointer;
 }
 
-
-.datepicker-container {
-  position: relative;
- /* display: inline-block; */
-  display: flex;
-  flex-direction: column;
-  gap: 1rem; /* Space between label/input pairs */
-}
-
-/* Now position the datepicker-dialog absolutely within that container */
+/* ────────────── Dialog ────────────── */
 .datepicker-dialog {
   position: absolute;
-  top: 100%;  /* below the input */
+  top: 100%;
   left: 0;
-  transform: none;
   background: #fff;
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   font-family: 'Segoe UI', sans-serif;
+  width: 100%;
   max-width: 380px;
   margin-top: 8px;
   z-index: 9999;
+}
+
+.datepicker-dialog.dual {
+  max-width: 700px;
 }
 
 .datepicker-dialog.above {
@@ -48,6 +50,7 @@ body {
   margin-top: 0;
 }
 
+/* ────────────── Header ────────────── */
 .picker-header {
   font-size: 1.2rem;
   margin-bottom: 1rem;
@@ -55,17 +58,27 @@ body {
   text-align: center;
 }
 
+/* ────────────── Calendar Layout ────────────── */
 .dual-calendar {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  gap: 1.5rem;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 1rem;
 }
 
 .calendar-section {
-  display: inline-block;
+  flex: 1;
+  min-width: 250px;
 }
 
+.calendar-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* ────────────── Controls ────────────── */
 .controls {
   display: flex;
   align-items: center;
@@ -92,6 +105,7 @@ body {
   background: #fff;
 }
 
+/* ────────────── Calendar Grid ────────────── */
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 2rem);
@@ -103,21 +117,21 @@ body {
   font-weight: bold;
   text-align: center;
   font-size: 0.8rem;
-  color: #000000;
+  color: #000;
   padding: 0.25rem;
 }
 
 .calendar button {
-  padding: 0.4rem 0.6rem;
-  margin: 1px;
-  border: 1px solid #ddd;
-  background-color: #f8f8f8;
-  border-radius: 6px;
+  padding: 0.5rem;
+  border: none;
+  background: #e9ecef;
+  border-radius: 0.375rem;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background 0.2s;
+  margin: 1px;
 }
 
-/* week days*/
 .calendar button:hover {
   outline: 2px solid #495057;
   outline-offset: 2px;
@@ -127,18 +141,6 @@ body {
   outline: 2px solid #007bff;
   outline-offset: 2px;
 }
-
-
-
-.calendar button {
-    padding: 0.5rem;
-    border: none;
-    background: #e9ecef;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
 
 .calendar button.range-start,
 .calendar button.range-end {
@@ -152,6 +154,18 @@ body {
   color: #000;
 }
 
+.calendar button.weekend {
+  background-color: #ffe8e8;
+  color: #d00000;
+}
+
+.calendar button.weekend:hover,
+.calendar button.weekend:focus {
+  background-color: #ffcccc;
+  outline: 2px solid #a10000;
+}
+
+/* ────────────── Time Controls ────────────── */
 .time-controls {
   margin-top: 1rem;
   display: flex;
@@ -174,6 +188,7 @@ body {
   background: #fff;
 }
 
+/* ────────────── Action Buttons ────────────── */
 .action-buttons {
   display: flex;
   justify-content: space-between;
@@ -207,21 +222,31 @@ body {
   background: #d6d8db;
 }
 
- .calendar button.weekend {
-  background-color: #ffe8e8;
-  color: #d00000;
-}
-.calendar button.weekend:hover,
-.calendar button.weekend:focus {
-  background-color: #ffcccc;
-  outline: 2px solid #a10000;
-}
-
-
-
+/* ────────────── Responsive ────────────── */
 @media (max-width: 600px) {
+	.datepicker-dialog {
+    width: 85vw;           
+    max-width: 85vw;
+    padding: 1rem;
+    box-sizing: border-box
+  }
   .dual-calendar {
     flex-direction: column;
+    flex-wrap: wrap;
+  }
+  
+    .calendar-section {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .calendar button {
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+
+  .datepicker-dialog.dual {
+    max-width: 100%;
   }
 
   .calendar {
