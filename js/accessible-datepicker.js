@@ -18,6 +18,7 @@ class AccessibleDatePicker {
 init() {
     this.createDialog();
     this.input.addEventListener('click', () => {
+		 if (this.justClosed) return; // Prevent reopen if just closed
       document.querySelectorAll('.datepicker-dialog').forEach(dialog => {
         if (dialog !== this.dialog) dialog.style.display = 'none';
       });
@@ -393,6 +394,12 @@ init() {
    closeDialog() {
     this.dialog.style.display = 'none';
     this.input.setAttribute('aria-expanded', 'false');
+	
+  //  Prevent immediate reopen
+	this.justClosed = true;
+	setTimeout(() => {
+    this.justClosed = false;
+  }, 200); // 200ms is enough
   }
 
   openDialog() {
